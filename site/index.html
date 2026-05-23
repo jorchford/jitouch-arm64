@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>jitouch-arm64</title>
+    <meta name="description" content="A native Apple Silicon build of Jitouch, packaged as a drag-to-Applications Mac app.">
+    <link rel="icon" href="/assets/jitouch-icon.png">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <div class="hero-copy">
+          <img class="app-icon" src="/assets/jitouch-icon.png" alt="">
+          <p class="eyebrow">Native-feeling Mac trackpad gestures</p>
+          <h1>jitouch-arm64</h1>
+          <p class="lede">Jitouch rebuilt for Apple Silicon and repackaged as a simple drag-to-Applications app. The goal is not to turn it into a giant automation suite; the goal is to preserve the tactile, forgiving gesture engine that made it feel so fast.</p>
+          <div class="actions">
+            <a class="primary" href="https://github.com/constansino/jitouch-arm64/releases/latest">Download latest</a>
+            <a class="secondary" href="https://github.com/constansino/jitouch-arm64">View source</a>
+          </div>
+        </div>
+        <div class="hero-panel" aria-label="Package facts">
+          <div>
+            <span class="metric">arm64 + x86_64</span>
+            <span class="label">Universal app</span>
+          </div>
+          <div>
+            <span class="metric">1.9 MB</span>
+            <span class="label">Installed app size on test Mac</span>
+          </div>
+          <div>
+            <span class="metric">319 KB</span>
+            <span class="label">Main executable size</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="band">
+        <div class="section-head">
+          <p class="eyebrow">Why it still feels different</p>
+          <h2>Small, raw, and hand-shaped</h2>
+        </div>
+        <div class="feature-grid">
+          <article>
+            <h3>Raw touch contacts</h3>
+            <p>Jitouch listens to Apple's private MultitouchSupport contact stream and applies its own recognizers instead of treating every gesture as a generic trigger.</p>
+          </article>
+          <article>
+            <h3>Forgiving posture</h3>
+            <p>The original gesture model tolerates rotated hand placement and filters resting thumb or palm-like contacts before matching gestures.</p>
+          </article>
+          <article>
+            <h3>One-Fix gestures</h3>
+            <p>Gestures like One-Fix Left-Tap and One-Fix Right-Tap are first-class interactions, which is why they feel more natural than approximations in broader tools.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="compare">
+        <div class="section-head">
+          <p class="eyebrow">Measured on the migration Mac</p>
+          <h2>Jitouch vs a general automation tool</h2>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>jitouch-arm64</th>
+              <th>BetterTouchTool</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Primary goal</td>
+              <td>Trackpad and Magic Mouse gestures</td>
+              <td>General macOS automation</td>
+            </tr>
+            <tr>
+              <td>App bundle size</td>
+              <td>1.9 MB</td>
+              <td>184 MB</td>
+            </tr>
+            <tr>
+              <td>Main executable</td>
+              <td>319 KB</td>
+              <td>98 MB</td>
+            </tr>
+            <tr>
+              <td>Linked-library listing</td>
+              <td>28 otool lines</td>
+              <td>236 otool lines</td>
+            </tr>
+            <tr>
+              <td>Gesture philosophy</td>
+              <td>Purpose-built recognizers</td>
+              <td>Broad trigger/action platform</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="install">
+        <div class="section-head">
+          <p class="eyebrow">Install</p>
+          <h2>Drag, open, allow Accessibility</h2>
+        </div>
+        <ol>
+          <li>Download the DMG from GitHub Releases.</li>
+          <li>Drag Jitouch.app to Applications.</li>
+          <li>Open it once; it writes its own LaunchAgent for login startup.</li>
+          <li>Grant Accessibility permission in macOS Privacy & Security.</li>
+        </ol>
+        <p class="note">The final package keeps only one runtime app. The embedded preference pane is used for settings and does not contain another runnable Jitouch copy.</p>
+        <p class="note">Current builds are ad-hoc signed and not notarized, so macOS may require manual approval on first launch.</p>
+      </section>
+    </main>
+  </body>
+</html>
