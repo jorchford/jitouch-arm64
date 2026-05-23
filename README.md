@@ -123,8 +123,9 @@ The gesture recognizer itself is preserved.
 
 ## Links
 
-- Product homepage: coming after the first Vercel deploy
-- Migration writeup: coming after the AIYA post is published
+- Product homepage: https://jitouch-arm64.vercel.app
+- Latest release: https://github.com/constansino/jitouch-arm64/releases/tag/v2.82.1-arm64.1
+- Migration writeup: https://aiya.de5.net/t/topic/200
 
 ## License
 

@@ -8,3 +8,4 @@ release/*.zip
 site/.vercel
 site/.next
 site/node_modules
+.vercel
