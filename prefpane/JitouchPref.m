@@ -160,8 +160,11 @@ static CGEventRef CGEventCallback(CGEventTapProxy proxy, CGEventType type, CGEve
 "<dict>\n"
 "    <key>Label</key>\n"
 "    <string>com.jitouch.Jitouch.agent</string>\n"
-"    <key>Program</key>\n"
-"    <string>%@</string>\n"
+"    <key>ProgramArguments</key>\n"
+"    <array>\n"
+"        <string>%@</string>\n"
+"        <string>--background</string>\n"
+"    </array>\n"
 "    <key>RunAtLoad</key>\n"
 "    <true/>\n"
 "    <key>KeepAlive</key>\n"
@@ -202,7 +205,7 @@ static CGEventRef CGEventCallback(CGEventTapProxy proxy, CGEventType type, CGEve
     NSString *launchAgent = [self generateJitouchLaunchAgent];
     NSString *plistPath = [@"~/Library/LaunchAgents/com.jitouch.Jitouch.plist" stringByStandardizingPath];
     NSString *launchAgentPath = [@"~/Library/LaunchAgents" stringByStandardizingPath];
-    NSError *error;
+    NSError *error = nil;
     NSFileManager *fm = [NSFileManager defaultManager];
     // exit if the LaunchAgent plist already matches
     if ([fm fileExistsAtPath:plistPath] &&
@@ -215,8 +218,9 @@ static CGEventRef CGEventCallback(CGEventTapProxy proxy, CGEventType type, CGEve
     BOOL isDir;
     BOOL exists = [fm fileExistsAtPath:launchAgentPath isDirectory:&isDir];
     if (!exists) {
-        BOOL success = [fm createDirectoryAtPath:launchAgentPath withIntermediateDirectories:NO attributes:nil error:&error];
-        if (!success || error) {
+        error = nil;
+        BOOL success = [fm createDirectoryAtPath:launchAgentPath withIntermediateDirectories:YES attributes:nil error:&error];
+        if (!success && error) {
             NSLog(@"Error creating LaunchAgents directory at %@: %@", launchAgentPath, [error localizedDescription]);
         } else {
             NSLog(@"Created the LaunchAgents directory at %@", launchAgentPath);
@@ -228,6 +232,7 @@ static CGEventRef CGEventCallback(CGEventTapProxy proxy, CGEventType type, CGEve
     [self unloadJitouchLaunchAgent];
 
     // write the LaunchAgent plist
+    error = nil;
     [launchAgent writeToFile:plistPath atomically:YES encoding:NSUTF8StringEncoding error:&error];
     if (error) {
         NSLog(@"Error creating LaunchAgent at %@: %@", plistPath, [error localizedDescription]);

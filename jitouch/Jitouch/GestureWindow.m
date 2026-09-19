@@ -23,6 +23,9 @@ static float magicMouseHeight = 800;
         self.alphaValue = 1.0;
         self.opaque = NO;
         self.backgroundColor = [NSColor clearColor];
+        [self setLevel:NSFloatingWindowLevel];
+        [self setCollectionBehavior:NSWindowCollectionBehaviorCanJoinAllSpaces | NSWindowCollectionBehaviorFullScreenAuxiliary];
+        [self setIgnoresMouseEvents:YES];
 
         gestureView = [[GestureView alloc] initWithFrame:[self frame]];
         [self setContentView:gestureView];

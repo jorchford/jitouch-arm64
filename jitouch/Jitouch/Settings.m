@@ -281,15 +281,25 @@ static int notSynchronize;
 
 + (void)loadSettings {
     NSString *plistPath = [@"~/Library/Preferences/com.jitouch.Jitouch.plist" stringByStandardizingPath];
+    if (![[NSFileManager defaultManager] fileExistsAtPath:plistPath]) {
+        NSLog(@"Could not find preferences at %@, creating default plist.", plistPath);
+        [Settings createDefaultPlist];
+    }
 
     NSData *plistXML = [[NSFileManager defaultManager] contentsAtPath:plistPath];
+    if (!plistXML) {
+        NSLog(@"Failed to read preferences data at %@", plistPath);
+        return;
+    }
     NSError *error = nil;
     NSDictionary *newSettings = [NSPropertyListSerialization
                              propertyListWithData:plistXML
                              options:NSPropertyListMutableContainersAndLeaves
                              format:NULL
                              error:&error];
-    [Settings loadSettings2:newSettings];
+    if (newSettings) {
+        [Settings loadSettings2:newSettings];
+    }
 }
 
 + (void)loadSettings:(id)sender {

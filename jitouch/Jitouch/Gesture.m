@@ -3956,8 +3956,8 @@ static int mouseRecognizer(float x, float y, int step) {
                     if (distCounter >= 3) {
                         dispatch_async(dispatch_get_main_queue(), ^{
                             [gestureWindow display];
-                            [gestureWindow setLevel:NSScreenSaverWindowLevel];
-                            [gestureWindow makeKeyAndOrderFront:nil];
+                            [gestureWindow setLevel:NSFloatingWindowLevel];
+                            [gestureWindow orderFrontRegardless];
                         });
                         distCounter = -1;
                         returnValue = 1;
@@ -4078,8 +4078,8 @@ static void trackpadRecognizerOne(const Finger *data, int nFingers, double times
                         [gestureWindow setUpWindowForTrackpad];
                         [gestureWindow addPointX:data[0].px Y:data[0].py];
                         [gestureWindow display];
-                        [gestureWindow setLevel:NSScreenSaverWindowLevel];
-                        [gestureWindow makeKeyAndOrderFront:nil];
+                        [gestureWindow setLevel:NSFloatingWindowLevel];
+                        [gestureWindow orderFrontRegardless];
                     });
 
                     step = 3;
@@ -4255,8 +4255,8 @@ static void trackpadRecognizerTwo(const Finger *data, int nFingers, double times
                                && fabs(lenSqr(fing[0][0], fing[0][1], fing[1][0], fing[1][1])-lenSqr(data[0].px, data[0].py, data[1].px, data[1].py)) < 0.13) {
                                 dispatch_async(dispatch_get_main_queue(), ^{
                                     [gestureWindow display];
-                                    [gestureWindow setLevel:NSScreenSaverWindowLevel];
-                                    [gestureWindow makeKeyAndOrderFront:nil];
+                                    [gestureWindow setLevel:NSFloatingWindowLevel];
+                                    [gestureWindow orderFrontRegardless];
                                 });
                                 distCounter = -1;
                             } else {

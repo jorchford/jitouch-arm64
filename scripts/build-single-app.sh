@@ -12,8 +12,16 @@ APP_PRODUCT="$APP_DERIVED/Build/Products/Release/Jitouch.app"
 PREF_PRODUCT="$PREF_DERIVED/Build/Products/Release/Jitouch.prefPane"
 FINAL_APP="$PACKAGE/Jitouch.app"
 
-rm -rf "$BUILD" "$RELEASE"
+if [ -z "${DEVELOPER_DIR:-}" ] && [ -d "/Applications/Xcode.app/Contents/Developer" ]; then
+  export DEVELOPER_DIR="/Applications/Xcode.app/Contents/Developer"
+fi
+
+MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-12.0}"
+ARCHS="${ARCHS:-arm64 x86_64}"
+
+rm -rf "$BUILD"
 mkdir -p "$PACKAGE" "$RELEASE"
+rm -f "$RELEASE"/*.dmg "$RELEASE"/*.zip "$RELEASE"/SHA256SUMS
 
 xcodebuild \
   -project "$ROOT/jitouch/Jitouch/Jitouch.xcodeproj" \
@@ -21,9 +29,10 @@ xcodebuild \
   -configuration Release \
   -derivedDataPath "$APP_DERIVED" \
   clean build \
-  ARCHS="arm64 x86_64" \
+  ARCHS="$ARCHS" \
   ONLY_ACTIVE_ARCH=NO \
-  CODE_SIGNING_ALLOWED=NO
+  CODE_SIGNING_ALLOWED=NO \
+  MACOSX_DEPLOYMENT_TARGET="$MACOSX_DEPLOYMENT_TARGET"
 
 rm -rf "$ROOT/prefpane/Jitouch.app"
 /usr/bin/ditto "$APP_PRODUCT" "$ROOT/prefpane/Jitouch.app"
@@ -34,9 +43,10 @@ xcodebuild \
   -configuration Release \
   -derivedDataPath "$PREF_DERIVED" \
   clean build \
-  ARCHS="arm64 x86_64" \
+  ARCHS="$ARCHS" \
   ONLY_ACTIVE_ARCH=NO \
-  CODE_SIGNING_ALLOWED=NO
+  CODE_SIGNING_ALLOWED=NO \
+  MACOSX_DEPLOYMENT_TARGET="$MACOSX_DEPLOYMENT_TARGET"
 
 rm -rf "$FINAL_APP"
 /usr/bin/ditto "$APP_PRODUCT" "$FINAL_APP"
@@ -50,6 +60,20 @@ rm -rf "$FINAL_APP/Contents/Resources/Jitouch.prefPane"
 rm -rf "$FINAL_APP/Contents/Resources/Jitouch.prefPane/Contents/Resources/Jitouch.app"
 rm -rf "$ROOT/prefpane/Jitouch.app"
 
+# Build standalone Jitouch Preferences.app
+PREF_APP="$FINAL_APP/Contents/Resources/Jitouch Preferences.app"
+rm -rf "$PREF_APP"
+mkdir -p "$PREF_APP/Contents/MacOS" "$PREF_APP/Contents/Resources"
+cp "$ROOT/prefpane/PreferencesApp/Info.plist" "$PREF_APP/Contents/Info.plist"
+cp "$ROOT/prefpane/jitouchicon.icns" "$PREF_APP/Contents/Resources/jitouchicon.icns"
+
+xcrun clang -mmacosx-version-min="$MACOSX_DEPLOYMENT_TARGET" \
+  -arch arm64 -arch x86_64 \
+  -framework Cocoa -framework PreferencePanes \
+  "$ROOT/prefpane/PreferencesApp/main.m" \
+  -o "$PREF_APP/Contents/MacOS/Jitouch Preferences"
+
+codesign --force --deep --sign - "$PREF_APP"
 codesign --force --deep --sign - "$FINAL_APP"
 
 DMG_ROOT="$BUILD/dmgroot"

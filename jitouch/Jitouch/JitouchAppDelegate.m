@@ -39,8 +39,11 @@ CGKeyCode keyMap[128]; // for dvorak support
 "<dict>\n"
 "    <key>Label</key>\n"
 "    <string>com.jitouch.Jitouch.agent</string>\n"
-"    <key>Program</key>\n"
-"    <string>%@</string>\n"
+"    <key>ProgramArguments</key>\n"
+"    <array>\n"
+"        <string>%@</string>\n"
+"        <string>--background</string>\n"
+"    </array>\n"
 "    <key>RunAtLoad</key>\n"
 "    <true/>\n"
 "    <key>KeepAlive</key>\n"
@@ -139,6 +142,12 @@ CGKeyCode keyMap[128]; // for dvorak support
 }
 
 - (void)preferences:(id)sender  {
+    NSString *prefAppPath = [[NSBundle mainBundle] pathForResource:@"Jitouch Preferences" ofType:@"app"];
+    if (prefAppPath && [[NSFileManager defaultManager] fileExistsAtPath:prefAppPath]) {
+        [[NSWorkspace sharedWorkspace] openURL:[NSURL fileURLWithPath:prefAppPath]];
+        return;
+    }
+
     NSString *prefPath = [[NSBundle mainBundle] pathForResource:@"Jitouch" ofType:@"prefPane"];
     if (!prefPath)
         prefPath = [@"~/Library/PreferencePanes/Jitouch.prefPane" stringByExpandingTildeInPath];
@@ -147,7 +156,7 @@ CGKeyCode keyMap[128]; // for dvorak support
     }
 
     if ([[NSFileManager defaultManager] fileExistsAtPath:prefPath]) {
-        [[NSWorkspace sharedWorkspace] openFile:prefPath];
+        [[NSWorkspace sharedWorkspace] openURL:[NSURL fileURLWithPath:prefPath]];
     } else {
         NSAlert *alert = [[NSAlert alloc] init];
         [alert setMessageText:@"Can't find the jitouch preference panel."];
@@ -267,7 +276,17 @@ void languageChanged(CFNotificationCenterRef center, void *observer, CFStringRef
 
     [[[NSWorkspace sharedWorkspace] notificationCenter] addObserver:self selector:@selector(wokeUp:) name:NSWorkspaceDidWakeNotification object: NULL];
 
+    // If launched manually (e.g. user clicked Jitouch.app) rather than silently via LaunchAgent (--background)
+    if (![[[NSProcessInfo processInfo] arguments] containsObject:@"--background"]) {
+        [self preferences:nil];
+    }
+
     //CFNotificationCenterAddObserver(CFNotificationCenterGetDistributedCenter(), self, languageChanged, kTISNotifySelectedKeyboardInputSourceChanged, NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
+}
+
+- (BOOL)applicationShouldHandleReopen:(NSApplication *)sender hasVisibleWindows:(BOOL)flag {
+    [self preferences:nil];
+    return YES;
 }
 
 - (void)wokeUp:(NSNotification *)aNotification {

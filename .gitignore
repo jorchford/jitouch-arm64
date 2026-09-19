@@ -9,3 +9,4 @@ site/.vercel
 site/.next
 site/node_modules
 .vercel
+.mcp.json
