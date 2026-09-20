@@ -73,8 +73,13 @@ xcrun clang -mmacosx-version-min="$MACOSX_DEPLOYMENT_TARGET" \
   "$ROOT/prefpane/PreferencesApp/main.m" \
   -o "$PREF_APP/Contents/MacOS/Jitouch Preferences"
 
-codesign --force --deep --sign - "$PREF_APP"
-codesign --force --deep --sign - "$FINAL_APP"
+SIGN_IDENTITY=$(security find-identity -v -p codesigning | grep "Apple Development" | head -n 1 | awk -F '"' '{print $2}')
+if [ -z "$SIGN_IDENTITY" ]; then
+  SIGN_IDENTITY="-"
+fi
+echo "Code signing using identity: $SIGN_IDENTITY"
+codesign --force --deep --sign "$SIGN_IDENTITY" "$PREF_APP"
+codesign --force --deep --sign "$SIGN_IDENTITY" "$FINAL_APP"
 
 DMG_ROOT="$BUILD/dmgroot"
 mkdir -p "$DMG_ROOT"

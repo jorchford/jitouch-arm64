@@ -614,18 +614,29 @@ static BOOL isMouseOnEmptySpace() {
     return ret;
 }
 
+static NSDictionary* getMapForApp(NSDictionary *map, NSString *application) {
+    if (!application) return nil;
+    NSDictionary *d = [map objectForKey:application];
+    if (d) return d;
+    if ([application isEqualToString:@"Google Chrome"]) return [map objectForKey:@"Chrome"];
+    if ([application isEqualToString:@"Chrome"]) return [map objectForKey:@"Google Chrome"];
+    return nil;
+}
+
 static NSString* commandForGesture(NSString *gesture, int device) {
     NSString *ret = nil;
     CFTypeRef axui = axuiUnderMouse();
     NSString *application = nameOfAxui(axui);
 
-    NSDictionary *commandDict;
+    NSDictionary *commandDict = nil;
     if (device == TRACKPAD) {
-        commandDict = [[trackpadMap objectForKey:application] objectForKey:gesture];
+        NSDictionary *appMap = getMapForApp(trackpadMap, application);
+        commandDict = [appMap objectForKey:gesture];
         if (!commandDict)
             commandDict = [[trackpadMap objectForKey:@"All Applications"] objectForKey:gesture];
     } else {
-        commandDict = [[magicMouseMap objectForKey:application] objectForKey:gesture];
+        NSDictionary *appMap = getMapForApp(magicMouseMap, application);
+        commandDict = [appMap objectForKey:gesture];
         if (!commandDict)
             commandDict = [[magicMouseMap objectForKey:@"All Applications"] objectForKey:gesture];
     }
@@ -663,21 +674,24 @@ static void doCommand(NSString *gesture, int device) {
     NSDictionary *commandDict = nil;
 
     if (device == TRACKPAD) {
-        commandDict = [[trackpadMap objectForKey:application] objectForKey:gesture];
+        NSDictionary *appMap = getMapForApp(trackpadMap, application);
+        commandDict = [appMap objectForKey:gesture];
         if (!commandDict || ![[commandDict objectForKey:@"Enable"] boolValue])
-            commandDict = [[trackpadMap objectForKey:application] objectForKey:@"All Unassigned Gestures"];
+            commandDict = [appMap objectForKey:@"All Unassigned Gestures"];
         if (!commandDict || ![[commandDict objectForKey:@"Enable"] boolValue])
             commandDict = [[trackpadMap objectForKey:@"All Applications"] objectForKey:gesture];
     } else if (device == MAGICMOUSE) {
-        commandDict = [[magicMouseMap objectForKey:application] objectForKey:gesture];
+        NSDictionary *appMap = getMapForApp(magicMouseMap, application);
+        commandDict = [appMap objectForKey:gesture];
         if (!commandDict || ![[commandDict objectForKey:@"Enable"] boolValue])
-            commandDict = [[magicMouseMap objectForKey:application] objectForKey:@"All Unassigned Gestures"];
+            commandDict = [appMap objectForKey:@"All Unassigned Gestures"];
         if (!commandDict || ![[commandDict objectForKey:@"Enable"] boolValue])
             commandDict = [[magicMouseMap objectForKey:@"All Applications"] objectForKey:gesture];
     } else if (device == CHARRECOGNITION) {
-        commandDict = [[recognitionMap objectForKey:application] objectForKey:gesture];
+        NSDictionary *appMap = getMapForApp(recognitionMap, application);
+        commandDict = [appMap objectForKey:gesture];
         if (!commandDict || ![[commandDict objectForKey:@"Enable"] boolValue])
-            commandDict = [[recognitionMap objectForKey:application] objectForKey:@"All Unassigned Gestures"];
+            commandDict = [appMap objectForKey:@"All Unassigned Gestures"];
         if (!commandDict || ![[commandDict objectForKey:@"Enable"] boolValue])
             commandDict = [[recognitionMap objectForKey:@"All Applications"] objectForKey:gesture];
     }
@@ -702,17 +716,9 @@ static void doCommand(NSString *gesture, int device) {
             if ([command isEqualToString:@"-"]) {
 
             } else if ([command isEqualToString:@"Next Tab"]) {
-                if ([application isEqualToString:@"Google Chrome"] || [application isEqualToString:@"Safari"]) {
-                    [keyUtil simulateKey:@"]" ShftDown:YES CtrlDown:NO AltDown:NO CmdDown:YES];
-                } else {
-                    [keyUtil simulateKey:@"Tab" ShftDown:NO CtrlDown:YES AltDown:NO CmdDown:NO];
-                }
+                [keyUtil simulateKey:@"]" ShftDown:YES CtrlDown:NO AltDown:NO CmdDown:YES];
             } else if ([command isEqualToString:@"Previous Tab"]) {
-                if ([application isEqualToString:@"Google Chrome"] || [application isEqualToString:@"Safari"]) {
-                    [keyUtil simulateKey:@"[" ShftDown:YES CtrlDown:NO AltDown:NO CmdDown:YES];
-                } else {
-                    [keyUtil simulateKey:@"Tab" ShftDown:YES CtrlDown:YES AltDown:NO CmdDown:NO];
-                }
+                [keyUtil simulateKey:@"[" ShftDown:YES CtrlDown:NO AltDown:NO CmdDown:YES];
             } else if ([command isEqualToString:@"Open Link in New Tab"]) {
                 CGEventRef ourEvent = CGEventCreate(NULL);
                 CGPoint ourLoc = CGEventGetLocation(ourEvent);
