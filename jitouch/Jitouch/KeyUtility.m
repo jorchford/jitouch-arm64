@@ -53,28 +53,36 @@ static void languageChanged(CFNotificationCenterRef center, void *observer, CFSt
 }
 
 - (void)simulateKeyCode:(CGKeyCode)code ShftDown:(BOOL)shft CtrlDown:(BOOL)ctrl AltDown:(BOOL)alt CmdDown:(BOOL)cmd {
+    CGEventSourceRef source = CGEventSourceCreate(kCGEventSourceStateCombinedSessionState);
+    CGEventFlags flags = 0;
+    if (cmd)  flags |= kCGEventFlagMaskCommand;
+    if (shft) flags |= kCGEventFlagMaskShift;
+    if (ctrl) flags |= kCGEventFlagMaskControl;
+    if (alt)  flags |= kCGEventFlagMaskAlternate;
 
-     if (shft)
-     CGPostKeyboardEvent((CGCharCode)0, (CGKeyCode)56, true);
-     if (ctrl)
-     CGPostKeyboardEvent((CGCharCode)0, (CGKeyCode)59, true);
-     if (alt)
-     CGPostKeyboardEvent((CGCharCode)0, (CGKeyCode)58, true);
-     if (cmd)
-     CGPostKeyboardEvent((CGCharCode)0, (CGKeyCode)55, true);
+    CGKeyCode targetCode = (code < 128) ? a[code] : code;
 
-     CGPostKeyboardEvent((CGCharCode)0, a[code], true);
-     CGPostKeyboardEvent((CGCharCode)0, a[code], false);
+    CGEventRef keyDown = CGEventCreateKeyboardEvent(source, targetCode, true);
+    CGEventRef keyUp = CGEventCreateKeyboardEvent(source, targetCode, false);
 
-     if (shft)
-     CGPostKeyboardEvent((CGCharCode)0, (CGKeyCode)56, false);
-     if (ctrl)
-     CGPostKeyboardEvent((CGCharCode)0, (CGKeyCode)59, false);
-     if (alt)
-     CGPostKeyboardEvent((CGCharCode)0, (CGKeyCode)58, false);
-     if (cmd)
-     CGPostKeyboardEvent((CGCharCode)0, (CGKeyCode)55, false);
+    if (flags != 0) {
+        if (keyDown) CGEventSetFlags(keyDown, flags);
+        if (keyUp)   CGEventSetFlags(keyUp, flags);
+    }
 
+    if (keyDown) {
+        CGEventPost(kCGHIDEventTap, keyDown);
+        CFRelease(keyDown);
+    }
+
+    usleep(20000); // 20ms delay for applications to register key down
+
+    if (keyUp) {
+        CGEventPost(kCGHIDEventTap, keyUp);
+        CFRelease(keyUp);
+    }
+
+    if (source) CFRelease(source);
 }
 
 - (void) simulateKey:(NSString *)key ShftDown:(BOOL)shft CtrlDown:(BOOL)ctrl AltDown:(BOOL)alt CmdDown:(BOOL)cmd {

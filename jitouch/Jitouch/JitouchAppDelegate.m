@@ -251,6 +251,17 @@ void languageChanged(CFNotificationCenterRef center, void *observer, CFStringRef
 */
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
+    NSArray *apps = [NSRunningApplication runningApplicationsWithBundleIdentifier:[[NSBundle mainBundle] bundleIdentifier]];
+    for (NSRunningApplication *app in apps) {
+        if (app.processIdentifier != [[NSProcessInfo processInfo] processIdentifier]) {
+            if (![[[NSProcessInfo processInfo] arguments] containsObject:@"--background"]) {
+                [self preferences:nil];
+            }
+            [NSApp terminate:nil];
+            return;
+        }
+    }
+
     [Settings loadSettings];
     [self ensureJitouchLaunchAgent];
 

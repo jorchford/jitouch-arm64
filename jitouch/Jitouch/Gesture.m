@@ -279,35 +279,40 @@ static void getMousePosition(CGFloat *x, CGFloat *y) {
 }
 
 static CFTypeRef getForemostApp() {
-    CFTypeRef focusedAppRef;
-    if (systemWideElement && AXUIElementCopyAttributeValue(systemWideElement, kAXFocusedApplicationAttribute, &focusedAppRef) != kAXErrorSuccess) {
+    CFTypeRef focusedAppRef = NULL;
+    if (!systemWideElement || AXUIElementCopyAttributeValue(systemWideElement, kAXFocusedApplicationAttribute, &focusedAppRef) != kAXErrorSuccess || !focusedAppRef) {
         NSRunningApplication *frontmostApplication = [[NSWorkspace sharedWorkspace] frontmostApplication];
-        focusedAppRef = AXUIElementCreateApplication([frontmostApplication processIdentifier]);
-        if (focusedAppRef == NULL) {
+        if (frontmostApplication) {
+            focusedAppRef = AXUIElementCreateApplication([frontmostApplication processIdentifier]);
+        }
+        if (!focusedAppRef) {
             return NULL;
         }
     }
-    CFTypeRef focusedWindowRef;
+    CFTypeRef focusedWindowRef = NULL;
 
-    // does this code belong here?
-    CFTypeRef titleRef;
-    if (AXUIElementCopyAttributeValue(focusedAppRef, kAXTitleAttribute, &titleRef) == kAXErrorSuccess) {
+    CFTypeRef titleRef = NULL;
+    if (AXUIElementCopyAttributeValue((AXUIElementRef)focusedAppRef, kAXTitleAttribute, &titleRef) == kAXErrorSuccess && titleRef) {
         if (
             [(NSString*)titleRef isEqualToString:@"Notification Center"] ||
             [(NSString*)titleRef isEqualToString:@"Control Center"]
         ) {
             CFRelease(titleRef);
+            CFRelease(focusedAppRef);
             return NULL;
         }
         CFRelease(titleRef);
     }
 
-    if (AXUIElementCopyAttributeValue(focusedAppRef, kAXFocusedWindowAttribute, &focusedWindowRef) == kAXErrorSuccess) {
+    if (AXUIElementCopyAttributeValue((AXUIElementRef)focusedAppRef, kAXFocusedWindowAttribute, &focusedWindowRef) == kAXErrorSuccess && focusedWindowRef) {
         CFRelease(focusedAppRef);
         return focusedWindowRef;
     }
-    CFRelease(focusedAppRef);
-    return NULL;
+    if (AXUIElementCopyAttributeValue((AXUIElementRef)focusedAppRef, kAXMainWindowAttribute, &focusedWindowRef) == kAXErrorSuccess && focusedWindowRef) {
+        CFRelease(focusedAppRef);
+        return focusedWindowRef;
+    }
+    return focusedAppRef;
 }
 
 static void getWindowPos(CFTypeRef winRef, CGFloat *x, CGFloat *y) {
@@ -451,30 +456,34 @@ static void maximizeWindow(CFTypeRef window, int pos) {
 
 static NSString* nameOfAxui(CFTypeRef ref) {
     pid_t theTgtAppPID = 0;
-    ProcessSerialNumber theTgtAppPSN = {0, 0};
-    CFStringRef processName = NULL;
-    if (AXUIElementGetPid(ref, &theTgtAppPID) == kAXErrorSuccess &&
-        GetProcessForPID(theTgtAppPID, &theTgtAppPSN) == noErr) {
-        CopyProcessName(&theTgtAppPSN, &processName);
+    if (ref && AXUIElementGetPid((AXUIElementRef)ref, &theTgtAppPID) == kAXErrorSuccess && theTgtAppPID > 0) {
+        NSRunningApplication *app = [NSRunningApplication runningApplicationWithProcessIdentifier:theTgtAppPID];
+        if (app.localizedName) {
+            return (NSString *)CFBridgingRetain([app.localizedName copy]);
+        }
     }
-    return (NSString *)processName;
+    NSRunningApplication *frontApp = [[NSWorkspace sharedWorkspace] frontmostApplication];
+    if (frontApp && frontApp.localizedName) {
+        return (NSString *)CFBridgingRetain([frontApp.localizedName copy]);
+    }
+    return NULL;
 }
 
 static CFTypeRef activateWindowAtPosition(CGFloat x, CGFloat y) {
-    AXUIElementRef focusedElement;
-    CFTypeRef windowRef, tmp;
+    AXUIElementRef focusedElement = nil;
+    CFTypeRef windowRef = nil;
+    CFTypeRef tmp = nil;
     pid_t theTgtAppPID = 0;
-    ProcessSerialNumber theTgtAppPSN = {0, 0};
 
-    if (systemWideElement && AXUIElementCopyElementAtPosition(systemWideElement, x, y, &focusedElement) == kAXErrorSuccess) {
-        // Catch app such as TextMate that doesn't provide accessibilty interface
+    if (systemWideElement && AXUIElementCopyElementAtPosition(systemWideElement, x, y, &focusedElement) == kAXErrorSuccess && focusedElement) {
+        // Catch app such as TextMate that doesn't provide accessibility interface
         if (AXUIElementCopyAttributeValue(focusedElement, kAXRoleAttribute, &tmp) != kAXErrorSuccess) {
-            if (AXUIElementGetPid(focusedElement, &theTgtAppPID) == kAXErrorSuccess &&
-                GetProcessForPID(theTgtAppPID, &theTgtAppPSN) == noErr &&
-                SetFrontProcess(&theTgtAppPSN) == noErr) {
+            if (AXUIElementGetPid(focusedElement, &theTgtAppPID) == kAXErrorSuccess && theTgtAppPID > 0) {
+                NSRunningApplication *app = [NSRunningApplication runningApplicationWithProcessIdentifier:theTgtAppPID];
+                [app activateWithOptions:NSApplicationActivateIgnoringOtherApps];
                 CFRelease(focusedElement);
                 AXUIElementCopyAttributeValue(systemWideElement, kAXFocusedApplicationAttribute, &tmp);
-                if (tmp && AXUIElementCopyAttributeValue(tmp, kAXFocusedWindowAttribute, &windowRef) == kAXErrorSuccess) {
+                if (tmp && AXUIElementCopyAttributeValue((AXUIElementRef)tmp, kAXFocusedWindowAttribute, &windowRef) == kAXErrorSuccess) {
                     CFRelease(tmp);
                     return windowRef;
                 }
@@ -484,13 +493,13 @@ static CFTypeRef activateWindowAtPosition(CGFloat x, CGFloat y) {
             CFRelease(focusedElement);
         } else {
             CFRelease(tmp);
-            if (AXUIElementCopyAttributeValue(focusedElement, kAXWindowAttribute, &windowRef) != kAXErrorSuccess) {
+            if (AXUIElementCopyAttributeValue(focusedElement, kAXWindowAttribute, &windowRef) != kAXErrorSuccess || !windowRef) {
                 windowRef = focusedElement;
             }
-            AXUIElementPerformAction(windowRef, kAXRaiseAction);
-            if (AXUIElementGetPid(windowRef, &theTgtAppPID) == kAXErrorSuccess &&
-                GetProcessForPID(theTgtAppPID, &theTgtAppPSN) == noErr &&
-                SetFrontProcessWithOptions(&theTgtAppPSN, kSetFrontProcessFrontWindowOnly) == noErr) {
+            AXUIElementPerformAction((AXUIElementRef)windowRef, kAXRaiseAction);
+            if (AXUIElementGetPid((AXUIElementRef)windowRef, &theTgtAppPID) == kAXErrorSuccess && theTgtAppPID > 0) {
+                NSRunningApplication *app = [NSRunningApplication runningApplicationWithProcessIdentifier:theTgtAppPID];
+                [app activateWithOptions:NSApplicationActivateIgnoringOtherApps];
             }
             if (windowRef != focusedElement)
                 CFRelease(focusedElement);
@@ -676,6 +685,15 @@ static void doCommand(NSString *gesture, int device) {
     if (commandDict && [[commandDict objectForKey:@"Enable"] boolValue]) {
         CGFloat x, y;
         getMousePosition(&x, &y);
+        CFTypeRef targetWin = nil;
+        if (device == CHARRECOGNITION) {
+            NSRunningApplication *frontApp = [[NSWorkspace sharedWorkspace] frontmostApplication];
+            if (frontApp && ![frontApp.bundleIdentifier isEqualToString:[[NSBundle mainBundle] bundleIdentifier]]) {
+                [frontApp activateWithOptions:NSApplicationActivateIgnoringOtherApps];
+            }
+        } else {
+            targetWin = activateWindowAtPosition(x, y);
+        }
         if ([[commandDict objectForKey:@"IsAction"] boolValue]) {
             //action
             NSString *command = [commandDict objectForKey:@"Command"];
@@ -684,11 +702,17 @@ static void doCommand(NSString *gesture, int device) {
             if ([command isEqualToString:@"-"]) {
 
             } else if ([command isEqualToString:@"Next Tab"]) {
-                [keyUtil simulateKey:@"Tab" ShftDown:NO CtrlDown:YES AltDown:NO CmdDown:NO];
-                //[keyUtil simulateKey:@"]" ShftDown:YES CtrlDown:NO AltDown:NO CmdDown:YES];
+                if ([application isEqualToString:@"Google Chrome"] || [application isEqualToString:@"Safari"]) {
+                    [keyUtil simulateKey:@"]" ShftDown:YES CtrlDown:NO AltDown:NO CmdDown:YES];
+                } else {
+                    [keyUtil simulateKey:@"Tab" ShftDown:NO CtrlDown:YES AltDown:NO CmdDown:NO];
+                }
             } else if ([command isEqualToString:@"Previous Tab"]) {
-                [keyUtil simulateKey:@"Tab" ShftDown:YES CtrlDown:YES AltDown:NO CmdDown:NO];
-                //[keyUtil simulateKey:@"[" ShftDown:YES CtrlDown:NO AltDown:NO CmdDown:YES];
+                if ([application isEqualToString:@"Google Chrome"] || [application isEqualToString:@"Safari"]) {
+                    [keyUtil simulateKey:@"[" ShftDown:YES CtrlDown:NO AltDown:NO CmdDown:YES];
+                } else {
+                    [keyUtil simulateKey:@"Tab" ShftDown:YES CtrlDown:YES AltDown:NO CmdDown:NO];
+                }
             } else if ([command isEqualToString:@"Open Link in New Tab"]) {
                 CGEventRef ourEvent = CGEventCreate(NULL);
                 CGPoint ourLoc = CGEventGetLocation(ourEvent);
@@ -791,25 +815,13 @@ static void doCommand(NSString *gesture, int device) {
             } else if ([command isEqualToString:@"Save"]) {
                 [keyUtil simulateKey:@"S" ShftDown:NO CtrlDown:NO AltDown:NO CmdDown:YES];
             } else if ([command isEqualToString:@"Launch Finder"]) {
-                NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-                [[NSWorkspace sharedWorkspace] launchApplication:@"Finder"];
-                [pool release];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [[NSWorkspace sharedWorkspace] launchApplication:@"Finder"];
+                });
             } else if ([command isEqualToString:@"Launch Browser"]) {
-                NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-                CFStringRef tmp = LSCopyDefaultHandlerForURLScheme(CFSTR("http"));
-                if (tmp) {
-                    NSString *defaultBrowser = (NSString*)tmp;
-                    if (![[NSWorkspace sharedWorkspace] launchAppWithBundleIdentifier:defaultBrowser
-                                                                              options:NSWorkspaceLaunchDefault
-                                                       additionalEventParamDescriptor:nil
-                                                                     launchIdentifier:NULL]) {
-                        [[NSWorkspace sharedWorkspace] launchApplication:@"Safari"];
-                    }
-                    CFRelease(tmp);
-                } else {
-                    [[NSWorkspace sharedWorkspace] launchApplication:@"Safari"];
-                }
-                [pool release];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [[NSWorkspace sharedWorkspace] openURL:[NSURL URLWithString:@"https://"]];
+                });
             } else if ([command isEqualToString:@"Middle Click"]) {
                 CGEventRef eventRef;
 
@@ -968,6 +980,7 @@ static void doCommand(NSString *gesture, int device) {
             CFSafeRelease(tmpRef);
 
         }
+        CFSafeRelease(targetWin);
     }
 
     CFSafeRelease((CFStringRef)application);
